@@ -4,21 +4,24 @@ import sys
 import tempfile
 
 if len(sys.argv) <= 1 or sys.argv[1] == "-h" or sys.argv[1] == "?":
-    print("Usage: python export.py <filename.scad>\n")
+    print("Usage: python export.py <filename.scad> [fileType]\n")
     print("This script searches for \"module export()\" and individually renders and exports each item in it.")
     print("Each item is expected to be on its own line. The file name will be the comment on the same line, or the module call if no comment exists.")
     print("All files will be put in a folder with the same name as the scad file it's created from.")
     print("\nExample:\n")
-    print("TestFile.scad")
+    print("ExampleFile.scad")
     print("module export() {\n  cube(10);\n  sphere(5); //Ball\n}\n")
-    print("\"python export.py TestFile.scad\" will generate a folder named \"TestFile stl\", and will contain the files \"cube.stl\" and \"Ball.stl\"")
+    print("\"python export.py ExampleFile.scad\" will generate a folder named \"ExampleFile exported\", and will contain the files \"cube.stl\" and \"Ball.stl\"")
     sys.exit()
 
 scadFileName = sys.argv[1]
+fileType = "stl"
+if len(sys.argv) >= 3:
+    fileType = sys.argv[2]
 path = os.path.abspath(scadFileName)
 endofpath = max(path.rfind("/"), path.rfind("\\"))+1
 path = path[:endofpath]
-folder = path + scadFileName[:scadFileName.rfind(".")] + " stl"
+folder = path + scadFileName[:scadFileName.rfind(".")] + " exported"
 tempdir = tempfile.gettempdir()
 
 lines = [""]
@@ -83,7 +86,7 @@ def runOpenSCAD(appendLine, fileName):
     file.close()
 
     #export stl file
-    subprocess.run(["openscad", "-o" + os.path.join(folder, fileName) + ".stl", os.path.join(tempdir, "temp.scad")])
+    subprocess.run(["openscad", "-o" + os.path.join(folder, fileName) + "." + fileType, os.path.join(tempdir, "temp.scad")])
 
 
 def findFileName(string):
