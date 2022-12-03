@@ -26,8 +26,8 @@ tempdir = tempfile.gettempdir()
 
 lines = [""]
 
-exportStart = 0
-exportEnd = 0
+exportStart = -1
+exportEnd = -1
 
 def readFile(fileName):
     global exportStart
@@ -61,12 +61,12 @@ def readFile(fileName):
 
     #search for "module export()" and determine module size
     for i in range(len(lines)):
-        if exportStart == 0 and "module export(index)" in lines[i]:
+        if exportStart == -1 and "module export(index)" in lines[i]:
             if "{" in lines[i]:
                 exportStart = i
             elif "{" in lines[i+1]:
                 exportStart = i+1
-        if exportStart != 0 and exportEnd == 0:
+        if exportStart != -1 and exportEnd == -1:
             for c in lines[i]:
                 if c == "{":
                     bracketCount += 1
@@ -75,18 +75,6 @@ def readFile(fileName):
                     if bracketCount <= 0:
                         exportEnd = i
                         return
-
-
-def runOpenSCAD(appendLine, fileName):
-    #create temp scad file
-    file = open(os.path.join(tempdir, "temp.scad"), "w")
-    file.write("use <" + os.path.join(tempdir, "modified.scad") + ">")
-    file.write("\n" + appendLine)
-    file.flush()
-    file.close()
-
-    #export stl file
-    subprocess.run(["openscad", "-o" + os.path.join(folder, fileName) + "." + fileType, os.path.join(tempdir, "temp.scad")])
 
 
 def findFileName(string):
@@ -119,13 +107,21 @@ def compileRunSCAD():
     modified.flush()
     modified.close()
 
+    #create temp scad file
+    file = open(os.path.join(tempdir, "temp.scad"), "w")
+    file.write("use <" + os.path.join(tempdir, "modified.scad") + ">")
+    file.write("\nindex = 0;\nexport(index);")
+    file.flush()
+    file.close()
+
     index = 0
     #for each module called in export(), create a temp scad file and call it at the end
     for i in range(exportStart + 1, exportEnd):
         if ";" in lines[i]:
             name = findFileName(lines[i])
             print("Generating " + name + ".stl")
-            runOpenSCAD("export(" + str(index) + ");", name)
+            #export stl file
+            subprocess.run(["openscad", "-o", os.path.join(folder, name) + "." + fileType, "-D", "index = " + str(index), os.path.join(tempdir, "temp.scad")])
             index += 1
 
     #cleanup temp files
